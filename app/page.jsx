@@ -34,7 +34,7 @@ export default function Home() {
     }
   }, []);
 
-  // Radar de pagamento & Pixel: Purchase
+  // Radar de pagamento
   useEffect(() => {
     let interval;
     if (pixData?.transactionId && !isPaid) {
@@ -59,15 +59,17 @@ export default function Home() {
     setBaseValue(val);
     setBumpValue(0);
     setIsOrderbumpOpen(true);
-    if (typeof window !== 'undefined' && window.fbq) {
-      window.fbq('track', 'InitiateCheckout', { value: val, currency: 'BRL' }, { eventID: generateId('ic') });
-    }
   };
 
   const handleFinalize = async () => {
     setIsOrderbumpOpen(false);
     setIsPixOpen(true);
     setLoading(true);
+
+    // Dispara o InitiateCheckout apenas após a decisão do order bump
+    if (typeof window !== 'undefined' && window.fbq) {
+      window.fbq('track', 'InitiateCheckout', { value: totalAmount, currency: 'BRL' }, { eventID: generateId('ic') });
+    }
 
     try {
       const fbp = getCookie('_fbp');
@@ -88,6 +90,16 @@ export default function Home() {
       }
     } catch (error) { alert("Erro de conexão."); }
     finally { setLoading(false); }
+  };
+
+  // Dispara o evento Lead ao clicar em Doar Valor Personalizado
+  const handleCustomDonationClick = () => {
+    if (typeof window !== 'undefined' && window.fbq) {
+      window.fbq('track', 'Lead', {
+        content_name: 'Doação Valor Personalizado',
+        currency: 'BRL'
+      }, { eventID: generateId('lead') });
+    }
   };
 
   const qrText = pixData?.qrcode || pixData?.qrCode || pixData?.qr_code || pixData?.payload || pixData?.emv || "";
@@ -120,7 +132,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* QUADRO DE DOAÇÃO E FAQ RESTAURADO */}
+      {/* QUADRO DE DOAÇÃO E FAQ */}
       <section id="doacao" className="relative z-20 max-w-5xl mx-auto px-4 -mt-32 mb-16">
         <div className="bg-white rounded-3xl shadow-[0_10px_40px_rgba(0,0,0,0.1)] p-6 md:p-12 pb-16">
           
@@ -141,10 +153,18 @@ export default function Home() {
             <div className="flex items-center justify-center gap-2 text-[#D37D00] font-bold mb-4 text-[15px]"><Heart size={18} className="fill-[#D37D00]" /> Prefere doar outro valor?</div>
             <div className="inline-flex items-center gap-2 bg-white px-4 py-1.5 rounded-full border border-green-200 text-xs font-semibold mb-6 text-gray-700"><ShieldCheck size={16} className="text-[#00C853]" /> Recebedor do Pix: <strong className="text-green-700">PLEBANK.COM.BR</strong></div>
             <p className="text-gray-500 text-sm mb-6 max-w-md mx-auto">Você pode escolher doar um valor diferente de forma segura e rápida através do nosso checkout personalizado.</p>
-            <a href="https://dentpeg.com/checkout/portoseguroanimal" target="_blank" rel="noreferrer" className="inline-flex items-center justify-center bg-[#E67300] hover:bg-[#CC6600] text-white font-bold py-3.5 px-8 rounded-lg transition-all shadow-md gap-2 w-full md:w-auto">Doar Valor Personalizado</a>
+            <a 
+              href="https://dentpeg.com/checkout/portoseguroanimal" 
+              target="_blank" 
+              rel="noreferrer" 
+              onClick={handleCustomDonationClick}
+              className="inline-flex items-center justify-center bg-[#E67300] hover:bg-[#CC6600] text-white font-bold py-3.5 px-8 rounded-lg transition-all shadow-md gap-2 w-full md:w-auto"
+            >
+              Doar Valor Personalizado
+            </a>
           </div>
 
-          {/* PERGUNTAS FREQUENTES COMPLETAS */}
+          {/* PERGUNTAS FREQUENTES */}
           <div className="max-w-4xl mx-auto border-t border-gray-50 pt-12">
             <div className="text-center mb-8">
               <div className="flex items-center justify-center gap-2 text-[#1976D2] font-bold text-lg mb-1"><AlertCircle size={20} /> Perguntas Frequentes</div>
@@ -166,7 +186,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* SEÇÃO TRANSPARÊNCIA RESTAURADA */}
+      {/* SEÇÃO TRANSPARÊNCIA */}
       <section className="max-w-5xl mx-auto px-4 py-8 mb-16">
         <div className="flex flex-col md:flex-row items-center gap-12">
           <div className="w-full md:w-1/2">
@@ -188,7 +208,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* RODAPÉ RESTAURADO */}
+      {/* RODAPÉ */}
       <footer className="bg-[#1A1A1A] py-16 text-center text-gray-400">
         <div className="max-w-4xl mx-auto px-4">
           <div className="flex items-center justify-center gap-3 mb-8">
@@ -263,7 +283,21 @@ export default function Home() {
                         {qrText}
                         <div className="absolute top-0 right-0 h-full w-4 bg-gradient-to-l from-white to-transparent"></div>
                       </div>
-                      <button onClick={() => {navigator.clipboard.writeText(qrText); alert("Copiado!");}} className="w-full bg-[#00C853] hover:bg-[#00B248] text-white font-bold py-3.5 rounded-lg flex justify-center items-center gap-2 text-sm shadow-md transition-all hover:scale-105"><Copy size={16} /> COPIAR CÓDIGO</button>
+                      <button 
+                        onClick={() => {
+                          navigator.clipboard.writeText(qrText);
+                          if (typeof window !== 'undefined' && window.fbq) {
+                            window.fbq('track', 'Purchase', { 
+                              value: totalAmount, 
+                              currency: 'BRL' 
+                            }, { eventID: pixData?.transactionId || generateId('cp') });
+                          }
+                          alert("Copiado!");
+                        }} 
+                        className="w-full bg-[#00C853] hover:bg-[#00B248] text-white font-bold py-3.5 rounded-lg flex justify-center items-center gap-2 text-sm shadow-md transition-all hover:scale-105"
+                      >
+                        <Copy size={16} /> COPIAR CÓDIGO
+                      </button>
                     </div>
                   </div>
                   <div className="mt-6 bg-[#FFF8E6] border border-[#FDEBCE] rounded-lg p-3 text-xs text-[#B36B00] shadow-sm italic text-center">
