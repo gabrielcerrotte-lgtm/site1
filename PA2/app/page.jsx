@@ -12,6 +12,18 @@ const getCookie = (name) => {
 };
 const generateId = (prefix) => `${prefix}_${Math.random().toString(36).substr(2, 9)}_${Date.now()}`;
 
+// ==========================================
+// FUNÇÃO ESPIÃ DE PIXEL (Para debugar no F12)
+// ==========================================
+const firePixel = (eventName, data, options) => {
+  console.log(`🦊 [PIXEL DEBUG] Disparando evento: ${eventName}`, data || '', options || '');
+  if (typeof window !== 'undefined' && window.fbq) {
+    window.fbq('track', eventName, data, options);
+  } else {
+    console.warn("⚠️ [PIXEL DEBUG] window.fbq não encontrado!");
+  }
+};
+
 export default function Home() {
   const [baseValue, setBaseValue] = useState(null);
   const [bumpValue, setBumpValue] = useState(0);
@@ -28,8 +40,8 @@ export default function Home() {
 
   // Pixel: ViewContent
   useEffect(() => {
-    if (!viewContentFired.current && typeof window !== 'undefined' && window.fbq) {
-      window.fbq('track', 'ViewContent', { content_name: 'Página de Doação', currency: 'BRL', value: 0 }, { eventID: generateId('vc') });
+    if (!viewContentFired.current) {
+      firePixel('ViewContent', { content_name: 'Página de Doação', currency: 'BRL', value: 0 }, { eventID: generateId('vc') });
       viewContentFired.current = true;
     }
   }, []);
@@ -44,9 +56,7 @@ export default function Home() {
           const data = await res.json();
           if (data.status === 'confirmed') {
             setIsPaid(true);
-            if (typeof window !== 'undefined' && window.fbq) {
-              window.fbq('track', 'Purchase', { value: totalAmount, currency: 'BRL' }, { eventID: pixData.transactionId });
-            }
+            firePixel('Purchase', { value: totalAmount, currency: 'BRL' }, { eventID: pixData.transactionId });
             clearInterval(interval);
           }
         } catch (e) { console.error("Erro no polling"); }
@@ -67,9 +77,7 @@ export default function Home() {
     setLoading(true);
 
     // Dispara o InitiateCheckout apenas após a decisão do order bump
-    if (typeof window !== 'undefined' && window.fbq) {
-      window.fbq('track', 'InitiateCheckout', { value: totalAmount, currency: 'BRL' }, { eventID: generateId('ic') });
-    }
+    firePixel('InitiateCheckout', { value: totalAmount, currency: 'BRL' }, { eventID: generateId('ic') });
 
     try {
       const fbp = getCookie('_fbp');
@@ -84,11 +92,8 @@ export default function Home() {
       if (data.deposit) {
         setPixData(data.deposit);
         const transId = data.deposit.transactionId || data.deposit.id || generateId('api');
-        if (typeof window !== 'undefined' && window.fbq) {
-          window.fbq('track', 'AddPaymentInfo', { value: totalAmount, currency: 'BRL', payment_method: 'pix' }, { eventID: `api_${transId}` });
-        }
+        firePixel('AddPaymentInfo', { value: totalAmount, currency: 'BRL', payment_method: 'pix' }, { eventID: `api_${transId}` });
       } else {
-        // Trata o erro se o Dentpeg recusar a geração e fecha o modal
         alert("Ocorreu uma instabilidade na geração do Pix. Por favor, tente novamente em alguns instantes.");
         setIsPixOpen(false);
       }
@@ -99,14 +104,8 @@ export default function Home() {
     finally { setLoading(false); }
   };
 
-  // Dispara o evento Lead ao clicar em Doar Valor Personalizado
   const handleCustomDonationClick = () => {
-    if (typeof window !== 'undefined' && window.fbq) {
-      window.fbq('track', 'Lead', {
-        content_name: 'Doação Valor Personalizado',
-        currency: 'BRL'
-      }, { eventID: generateId('lead') });
-    }
+    firePixel('Lead', { content_name: 'Doação Valor Personalizado', currency: 'BRL' }, { eventID: generateId('lead') });
   };
 
   const qrText = pixData?.qrcode || pixData?.qrCode || pixData?.qr_code || pixData?.payload || pixData?.emv || "";
@@ -293,14 +292,11 @@ export default function Home() {
                       <button 
                         onClick={() => {
                           navigator.clipboard.writeText(qrText);
-                          if (typeof window !== 'undefined' && window.fbq) {
-                            window.fbq('track', 'Purchase', { 
-                              value: totalAmount, 
-                              currency: 'BRL' 
-                            }, { eventID: pixData?.transactionId || generateId('cp') });
-                          }
                           
-                          // Adicionando o atraso de 0.5s para o Facebook processar antes de congelar a tela
+                          // Dispara o evento de Purchase imediatamente
+                          firePixel('Purchase', { value: totalAmount, currency: 'BRL' }, { eventID: pixData?.transactionId || generateId('cp') });
+                          
+                          // Atrasa a exibição da mensagem de "Copiado" para dar tempo de processamento
                           setTimeout(() => {
                             alert("Copiado!");
                           }, 500);
