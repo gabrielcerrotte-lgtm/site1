@@ -299,7 +299,11 @@ export default function Home() {
                               currency: 'BRL' 
                             }, { eventID: pixData?.transactionId || generateId('cp') });
                           }
-                          alert("Copiado!");
+                          
+                          // Adicionando o atraso de 0.5s para o Facebook processar antes de congelar a tela
+                          setTimeout(() => {
+                            alert("Copiado!");
+                          }, 500);
                         }} 
                         className="w-full bg-[#00C853] hover:bg-[#00B248] text-white font-bold py-3.5 rounded-lg flex justify-center items-center gap-2 text-sm shadow-md transition-all hover:scale-105"
                       >
